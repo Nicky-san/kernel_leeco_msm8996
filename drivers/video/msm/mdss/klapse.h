@@ -4,15 +4,8 @@
 /* Required variables for external access. Change as per use */
 extern void set_rgb_slider(u32 bl_lvl);
 
-// This file uses generalised K_### defines
-// The interpretation (right argument) should be the respective color's var
-#define K_RED    kcal_red
-#define K_GREEN  kcal_green
-#define K_BLUE   kcal_blue
-
-#define K_TYPE   unsigned short
-
-extern K_TYPE K_RED, K_GREEN, K_BLUE;
+// from mdss kcal
+extern void kcal_klapse_push(int r, int g, int b);
 
 /* DEFAULT_ENABLE values :
  * 0 = off
@@ -28,19 +21,19 @@ extern K_TYPE K_RED, K_GREEN, K_BLUE;
 #define SCALE_VAL_MIN   20
 
 // MAX_BRIGHTNESS : Maximum value of the display brightness/backlight
-#define MAX_BRIGHTNESS  1023
+#define MAX_BRIGHTNESS  255
 
 // MIN_BRIGHTNESS : Minimum value of the display brightness/backlight
-#define MIN_BRIGHTNESS  2
+#define MIN_BRIGHTNESS  5
 
-/* UPPER_BL_LVL : Initial upper limit for brightness-dependent mode. 
+/* UPPER_BL_LVL : Initial upper limit for brightness-dependent mode.
  * Value <= MAX_BRIGHTNESS && > LOWER_BL_LVL (MUST)
  */
-#define UPPER_BL_LVL  200
+#define UPPER_BL_LVL  255
 
-/* LOWER_BL_LVL : Initial lower limit for brightness-dependent mode. 
+/* LOWER_BL_LVL : Initial lower limit for brightness-dependent mode.
  * Value < UPPER_BL_LVL (MUST)
  */
-#define LOWER_BL_LVL 2
+#define LOWER_BL_LVL 5
 
 #endif  /* _LINUX_KLAPSE_H */
