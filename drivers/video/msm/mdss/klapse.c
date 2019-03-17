@@ -6,38 +6,6 @@
 #include <linux/timer.h>
 #include "klapse.h"
 
-//Add additional headers below here only
-#include "sde_hw_color_proc_v4.h"
-
-/* DEFAULT_ENABLE values :
- * 0 = off
- * 1 = time-based scaling
- * 2 = brightness-based scaling
- */
-#define DEFAULT_ENABLE  0
-
-// MAX_SCALE : Maximum value of RGB possible
-#define MAX_SCALE       256
-
-// SCALE_VAL_MIN : Minimum value of RGB recommended
-#define SCALE_VAL_MIN   20
-
-// MAX_BRIGHTNESS : Maximum value of the display brightness/backlight
-#define MAX_BRIGHTNESS  1023
-
-// MIN_BRIGHTNESS : Minimum value of the display brightness/backlight
-#define MIN_BRIGHTNESS  2
-
-/* UPPER_BL_LVL : Initial upper limit for brightness-dependent mode. 
- * Value <= MAX_BRIGHTNESS && > LOWER_BL_LVL (MUST)
- */
-#define UPPER_BL_LVL  200
-
-/* LOWER_BL_LVL : Initial lower limit for brightness-dependent mode. 
- * Value < UPPER_BL_LVL (MUST)
- */
-#define LOWER_BL_LVL 2
-
 #define LIC "GPLv2"
 #define AUT "tanish2k09"
 #define VER "4.3"
@@ -52,7 +20,7 @@ MODULE_VERSION(VER);
 static unsigned int daytime_r, daytime_g, daytime_b, target_r, target_g, target_b;
 static unsigned int klapse_start_hour, klapse_stop_hour, enable_klapse;
 static unsigned int brightness_factor_auto_start_hour, brightness_factor_auto_stop_hour;
-static unsigned int  brightness_factor;
+static unsigned int brightness_factor;
 static unsigned int backlight_lower, backlight_upper;
 static unsigned int fadeback_minutes;
 static unsigned int pulse_freq;
@@ -64,6 +32,7 @@ static unsigned int target_minute; // <-- Masked as tunable by using klapse_scal
  *WARNING : DO NOT MAKE THEM TUNABLE
  */
 static unsigned int b_cache;
+static unsigned int klapse_red, klapse_green, klapse_blue;
 static unsigned int current_r, current_g, current_b;
 static unsigned int klapse_scaling_rate, active_minutes, last_bl;
 static unsigned long local_time;
@@ -125,10 +94,12 @@ static int get_minutes_before_stop(void)
 
 static void set_rgb(int r, int g, int b)
 {
-    K_RED = r;
-    K_GREEN = g;
-    K_BLUE = b;
-    
+    klapse_red = r;
+    klapse_green = g;
+    klapse_blue = b;
+
+    kcal_klapse_push(r, g, b);
+
     current_r = r;
     current_g = g;
     current_b = b;
@@ -246,7 +217,7 @@ static void klapse_pulse(unsigned long data)
     }
     else
     {
-        set_rgb_brightness(K_RED, K_GREEN, K_BLUE);
+        set_rgb_brightness(klapse_red, klapse_green, klapse_blue);
     }
     
     if (!timer_pending(&pulse_timer))
@@ -681,25 +652,25 @@ static ssize_t brightness_factor_dump(struct kobject *kobj,
             if (enable_klapse == 1)         // Pulse is already running, for thread-safety, stop it and then modify RGB
             {
                 flush_timer();
-                set_rgb_brightness((K_RED*10)/b_cache, (K_GREEN*10)/b_cache, (K_BLUE*10)/b_cache);
+                set_rgb_brightness((klapse_red*10)/b_cache, (klapse_green*10)/b_cache, (klapse_blue*10)/b_cache);
                 b_cache = tmpval;
                 klapse_pulse(0);
             }
             else        // Means pulse isn't running
             {
-                set_rgb_brightness((K_RED*10)/b_cache, (K_GREEN*10)/b_cache, (K_BLUE*10)/b_cache);
+                set_rgb_brightness((klapse_red*10)/b_cache, (klapse_green*10)/b_cache, (klapse_blue*10)/b_cache);
                 b_cache = tmpval;
                 brightness_factor = tmpval;
                 if (enable_klapse == 2)
                     set_rgb_slider(last_bl);
                 else
-                    set_rgb_brightness(K_RED, K_GREEN, K_BLUE);
+                    set_rgb_brightness(klapse_red, klapse_green, klapse_blue);
             }
         }
         else
         {
             flush_timer();
-            set_rgb_brightness((K_RED*10)/brightness_factor, (K_GREEN*10)/brightness_factor, (K_BLUE*10)/brightness_factor);
+            set_rgb_brightness((klapse_red*10)/brightness_factor, (klapse_green*10)/brightness_factor, (klapse_blue*10)/brightness_factor);
             b_cache = tmpval;
             klapse_pulse(0);
         }
@@ -741,7 +712,7 @@ static ssize_t brightness_factor_auto_enable_dump(struct kobject *kobj,
                 if (enable_klapse == 1)         // Pulse is already running, for thread-safety, stop it and then modify RGB
                     flush_timer();
                     
-                set_rgb_brightness((K_RED*10)/b_cache, (K_GREEN*10)/b_cache, (K_BLUE*10)/b_cache);
+                set_rgb_brightness((klapse_red*10)/b_cache, (klapse_green*10)/b_cache, (klapse_blue*10)/b_cache);
                 brightness_factor_auto_enable = tmpval;
                 klapse_pulse(0);
                 return count;
@@ -749,12 +720,12 @@ static ssize_t brightness_factor_auto_enable_dump(struct kobject *kobj,
             else    // Guarantees that pulse is on, and RGB is reduced, and tmpval is 0
             {
                 flush_timer();
-                set_rgb_brightness((K_RED*10)/brightness_factor, (K_GREEN*10)/brightness_factor, (K_BLUE*10)/brightness_factor);
+                set_rgb_brightness((klapse_red*10)/brightness_factor, (klapse_green*10)/brightness_factor, (klapse_blue*10)/brightness_factor);
                 brightness_factor_auto_enable = tmpval;
                 if (enable_klapse == 1)
                   klapse_pulse(0);
                 else
-                  set_rgb_brightness(K_RED, K_GREEN, K_BLUE);
+                  set_rgb_brightness(klapse_red, klapse_green, klapse_blue);
                 return count;
             }
         }
@@ -770,7 +741,7 @@ static ssize_t brightness_factor_auto_enable_dump(struct kobject *kobj,
             else if (tmpval == 0) // Stop pulse anyways
             {
                 flush_timer();
-                set_rgb_brightness(K_RED, K_GREEN, K_BLUE);
+                set_rgb_brightness(klapse_red, klapse_green, klapse_blue);
             }
         }
     }
@@ -1033,7 +1004,7 @@ static void values_setup(void)
     brightness_factor_auto_enable = 0;
     backlight_lower = LOWER_BL_LVL;
     backlight_upper = UPPER_BL_LVL;
-    last_bl = 1023;
+    last_bl = MAX_BRIGHTNESS;
     pulse_freq = 30000;
     fadeback_minutes = 60;
     calc_active_minutes();
