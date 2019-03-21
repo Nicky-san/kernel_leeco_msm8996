@@ -68,7 +68,7 @@ static void sdv_pm_wakeup_event(int line, struct device *dev, int timeout);
 #define DWC3_IDEV_CHG_MAX 1500
 #ifdef CONFIG_VENDOR_LEECO
 #define DWC3_HVDCP_CHG_MAX 2000
-#define DWC3_WAKEUP_SRC_TIMEOUT 500
+#define DWC3_WAKEUP_SRC_TIMEOUT 5000
 #else
 #define DWC3_HVDCP_CHG_MAX 1800
 #define DWC3_WAKEUP_SRC_TIMEOUT 5000

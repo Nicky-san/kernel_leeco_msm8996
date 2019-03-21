@@ -5765,7 +5765,13 @@ static int smbchg_change_usb_supply_type(struct smbchg_chip *chip,
 #endif
 	else
 		current_limit_ma = smbchg_default_dcp_icl_ma;
-
+	
+    if( chip->prev_black_call_mode ) {
+        if( current_limit_ma > BLACK_CALL_MODE_CURRENT ) {
+            current_limit_ma = BLACK_CALL_MODE_CURRENT;
+        }
+    }
+	
     if( chip->prev_quick_charge_mode ) {
         if( current_limit_ma > QUICK_CHARGE_MODE_CURRENT ) {
             current_limit_ma = QUICK_CHARGE_MODE_CURRENT;
